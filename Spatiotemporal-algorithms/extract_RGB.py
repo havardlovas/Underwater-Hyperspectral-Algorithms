@@ -31,8 +31,8 @@ for filename in os.listdir(directory_read):
         imgs = f_img['rgb/pixels'].value
         # Iterate through each image file in the file.
         for i in range(imgs.shape[0]):
-            # The image array.
-            img_array = imgs[i, :, :]
+            # The image array - dimensions NxMx3.
+            img_array = imgs[i]
             # Name each image by the file name.
             matplotlib.image.imsave(directory_write + filename + str(img_idx) + '.png', img_array)
             # Increment image index.
