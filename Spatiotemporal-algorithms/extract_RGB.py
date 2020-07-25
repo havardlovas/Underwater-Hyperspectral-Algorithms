@@ -4,6 +4,7 @@ import scipy.misc
 import png
 import matplotlib.image
 import os
+from PIL import Image
 
 ## Code that extracts all RGB files from UHI storage to PNG images
 def h5_to_PNG(dir_r, dir_w, n_f):
@@ -24,13 +25,13 @@ def h5_to_PNG(dir_r, dir_w, n_f):
             # Increment the file index
             file_idx = file_idx + 1
             # The image files are contained in a hierarchical path like 'rgb/pixels'. It can be explored in HDFview software
-            imgs = f_img['rgb/pixels'].value
+            imgs = f_img['rgb/pixels'][()]
             # Iterate through each image file in the file.
             for i in range(imgs.shape[0]):
-                # The image array - dimensions NxMx3.
-                img_array = imgs[i]
                 # Name each image by the file name.
-                matplotlib.image.imsave(dir_w + filename + str(img_idx) + '.png', img_array)
+                #matplotlib.image.imsave(dir_w + filename_no_ext + str(img_idx) + '.png', imgs[i])
+                im = Image.fromarray(imgs[i])
+                im.save(dir_w + filename_no_ext + str(img_idx) + '.png')
                 # Increment image index.
                 img_idx += 1
             # Print out progress.
@@ -49,7 +50,7 @@ if __name__ == '__main__':
     # The directory of the *.hdf-files. Files should be sorted chronologically.
     directory_read = 'D:/TautraUHI/ROV_UHI/'
     # Some directory for storing the red-green-blue images
-    directory_write = 'D:/TautraUHI/RGB_imgs_full/'
+    directory_write = 'D:/TautraUHI/RGB_imgs_full_new/'
     # The number of files in the read directory. Only used to evaluate percentage progress, and can be set to any number.
     num_files = 55
     # Save the images as PNGs
