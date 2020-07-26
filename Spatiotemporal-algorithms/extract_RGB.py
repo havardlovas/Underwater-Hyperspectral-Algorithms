@@ -29,9 +29,9 @@ def h5_to_PNG(dir_r, dir_w, n_f):
             # Iterate through each image file in the file.
             for i in range(imgs.shape[0]):
                 # Name each image by the file name.
-                #matplotlib.image.imsave(dir_w + filename_no_ext + str(img_idx) + '.png', imgs[i])
-                im = Image.fromarray(imgs[i])
-                im.save(dir_w + filename_no_ext + str(img_idx) + '.png')
+                matplotlib.image.imsave(dir_w + filename_no_ext + str(img_idx) + '.png', imgs[i])
+                #im = Image.fromarray(imgs[i])
+                #im.save(dir_w + filename_no_ext + str(img_idx) + '.png')
                 # Increment image index.
                 img_idx += 1
             # Print out progress.
