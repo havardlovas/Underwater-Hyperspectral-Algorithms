@@ -4,6 +4,7 @@ import os
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib
+import time
 def second_deg_solver(a, b, c):
     term1 = -b/(2*a)
     term2 = np.sqrt(b**2 - 4*a*c)/(2*a)
@@ -57,7 +58,7 @@ class Images:
         for i in range(self.n_images):
             self.images[i] = np.multiply(self.images[i], self.mask_mat)
 
-    def avg_image(self):
+    def avg_image_x(self):
         # Initiate an index to be used for division
         idx = 0
         # Initiate an average image array
@@ -71,52 +72,82 @@ class Images:
             idx += 1
             if idx % 100:
                 print(idx*100/22169)
-        self.avg = (avg_sum / idx).astype('float64')
+        self.mu_x = np.flip((avg_sum / idx).astype('float64'), axis = 2)
         self.n_images = idx
-    def avg_over_image_channel(self):
-        for i in range(self.n_images):
-            img = self.images[i,:,:,0:3]
-            self.avgRGB = np.mean(img, axis = (0,1)).astype('float64')
+        np.save('mu_x', self.mu_x)
+    def sigma_image_x(self):
 
-            self.avgI = np.mean(self.images[i,:,:,0:3]).astype('float64')
-
-            scale_arr = np.multiply(self.avgI, 1/self.avgRGB)
-
-            self.images[i,:,:,0:3] = np.multiply(scale_arr, self.images[i,:,:,0:3]).astype('uint8')
-
-    def grey_world_correction(self):
-        # Define first the average image as defined by the function
-        self.avg_image()
-        # The average image is thus defined
-        self.avg_pixel = np.mean(self.avg).astype('float64')
-        # Scale pixels by the mean pixel divided by the average of that pixel location
-        scale_arr = np.multiply(self.avg_pixel, 1 / self.avg)
-        # Need to do something with pixels of value "inf". Use a threshold
-        scale_arr[scale_arr > 100] = 0
-        # Idx for counting
+        sigma_sum = np.zeros((self.n_rows, self.n_columns, 3), dtype='float64')
         idx = 0
         for filename in os.listdir(self.image_dir):
+            # Create file path by merging the directory and filename
             path = os.path.join(self.image_dir, filename)
-            img_input = np.asarray(Image.open(path))
-
-            img_output = np.multiply(scale_arr, img_input[:, :, 0:3]).astype('uint8')
-            filename_no_ext = filename.split('.')[0]
-            matplotlib.image.imsave(self.image_dir_write + filename_no_ext + '.png', img_output)
+            img = np.asarray(Image.open(path))
+            sigma_sum += (img[:,:,0:3]-self.mu_x)**2
+            idx += 1
             if idx % 100:
-                print(idx*100/self.n_images)
+                print(idx*100/22169)
+        self.sigma_x = np.flip(np.sqrt(sigma_sum / idx).astype('float64'))
+        np.save('sigma_x', self.sigma_x)
+
+    def grey_world_correction(self):
+        #self.avg_image_x()
+
+        self.mu_x = np.load('mu_x.npy')
+
+        self.sigma_x = np.flip(np.flip(np.load('sigma_x.npy')), axis = 2)
+        #self.sigma_image_x()
+
+
+        self.mu_y = np.ones(self.sigma_x.shape)*90
+        self.sigma_y = np.ones(self.mu_x.shape)*30
+        # Define first the average image as defined by the function
+
+        # The intensity scaling of each pixel and waveband
+        self.m = np.multiply(self.sigma_y, 1/self.sigma_x)
+        # Apply an offset to the brightness.
+        self.n = self.mu_y - np.multiply(self.m, self.mu_x)
+
+
+
+
+
+
+        #.m[self.m > 100] = 0
+        # Idx for counting
+        idx = 0
+        t_start = time.time()
+        for filename in os.listdir(self.image_dir):
+            path = os.path.join(self.image_dir, filename)
+            img_x = np.flip( np.asarray(Image.open(path))[:, :, 0:3], axis = 2 )
+
+            # Apply transformation
+            img_y = (self.m*(img_x - self.mu_x) + self.mu_y )
+            # Make sure values are bounded
+            img_y[img_y > 255] = 255
+            img_y[img_y < 0] = 0
+            img_y = img_y.astype('uint8')
+
+            filename_no_ext = filename.split('.')[0]
+            matplotlib.image.imsave(self.image_dir_write + filename_no_ext + '.png', img_y)
+            if idx % 100 == 0 and idx != 0:
+                t = time.time()
+                #print('Final transformation')
+                print(idx*100/22169)
+                print('Time left = ' + str((22169-idx)*((t-t_start)/idx)) + ' s')
             idx += 1
 
 
 if __name__ == '__main__':
     img = Images(n_images = 22169, image_dir='D:/TautraUHI/RGB_imgs_full_new_2/', n_rows=486, n_columns=648
-                 , image_dir_write= 'D:/TautraUHI/RGB_imgs_corrected/')
+                 , image_dir_write= 'D:/TautraUHI/RGB_imgs_gw/')
     # Current arbitrary mask
     #img.apply_mask(r_x = 300, r_y = 243-5, x_0 = 324.0, y_0 = 195)
 
     #img.avg_over_image_channel()
     img.grey_world_correction()
     #img_arr = img.images
-    #img.avg_image()
+    #img.avg_image_x()
 
     plt.imshow(img.avg.astype('int'))
     plt.show()
